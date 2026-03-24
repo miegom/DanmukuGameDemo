@@ -1,0 +1,56 @@
+{
+  "upgrades": [
+    {
+      "id": "basic_rapid_fire_i",
+      "name": "Rapid Fire I",
+      "description": "+2.0 shots/sec for basic weapon",
+      "type": "emission",
+      "target": "basic_weapon",
+      "param": "fire_rate",
+      "mode": "add",
+      "value": 2.0
+    },
+    {
+      "id": "basic_velocity_i",
+      "name": "Needle Velocity I",
+      "description": "+30 projectile speed for basic weapon",
+      "type": "emission",
+      "target": "basic_weapon",
+      "param": "speed",
+      "mode": "add",
+      "value": 30.0
+    },
+    {
+      "id": "spell_rapid_cycle_i",
+      "name": "Spell Cycle I",
+      "description": "+0.6 casts/sec for spell card",
+      "type": "emission",
+      "target": "spell_card",
+      "param": "fire_rate",
+      "mode": "add",
+      "value": 0.6
+    },
+    {
+      "id": "spell_swirl_core",
+      "name": "Swirl Core",
+      "description": "Spell bullets gain spiral motion",
+      "type": "motion",
+      "target": "spell_card",
+      "motion": "swirl",
+      "params": {
+        "angular_speed": 1.4
+      }
+    },
+    {
+      "id": "basic_spin_drive",
+      "name": "Spin Drive",
+      "description": "+0.5 spin speed for basic weapon",
+      "type": "emission",
+      "target": "basic_weapon",
+      "param": "spin_speed",
+      "mode": "add",
+      "value": 0.5
+    }
+  ]
+}
+
