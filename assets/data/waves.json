@@ -1,25 +1,191 @@
 {
   "spawn_radius": 820.0,
-  "loop_waves": true,
-  "waves": [
+  "wave_duration": 30.0,
+  "enemy_presets": {
+    "zako_fairy_small": {
+      "hp": 20,
+      "radius": 12.0,
+      "move_speed": 72.0,
+      "ai_mode": "chase",
+      "burst_waves": 3,
+      "burst_interval": 0.22,
+      "burst_cooldown": 1.85,
+      "burst_fan_count": 3,
+      "burst_spread": 0.12,
+      "burst_bullet_speed": 185.0,
+      "bullet_max_lifetime": 2.7,
+      "death_bloom_rings": 0,
+      "visual_shape": "circle",
+      "visual_color": [230, 70, 85],
+      "drop_tier": 1
+    },
+    "zako_fairy_sniper_small": {
+      "hp": 22,
+      "radius": 12.0,
+      "move_speed": 74.0,
+      "ai_mode": "kite",
+      "preferred_distance": 350.0,
+      "burst_waves": 4,
+      "burst_interval": 0.2,
+      "burst_cooldown": 2.0,
+      "burst_fan_count": 4,
+      "burst_spread": 0.14,
+      "burst_bullet_speed": 200.0,
+      "bullet_max_lifetime": 3.0,
+      "death_bloom_rings": 0,
+      "visual_shape": "triangle",
+      "visual_color": [230, 70, 85],
+      "drop_tier": 1
+    },
+    "zako_fairy_rammer_small": {
+      "hp": 26,
+      "radius": 12.0,
+      "move_speed": 76.0,
+      "ai_mode": "charger",
+      "dash_trigger_distance": 170.0,
+      "dash_speed_multiplier": 2.05,
+      "burst_waves": 1,
+      "burst_interval": 0.22,
+      "burst_cooldown": 1.6,
+      "burst_fan_count": 3,
+      "burst_spread": 0.12,
+      "burst_bullet_speed": 180.0,
+      "bullet_max_lifetime": 2.6,
+      "death_bloom_rings": 0,
+      "visual_shape": "square",
+      "visual_color": [230, 70, 85],
+      "drop_tier": 2
+    },
+    "zako_fairy_death_small": {
+      "hp": 22,
+      "radius": 12.0,
+      "move_speed": 72.0,
+      "ai_mode": "chase",
+      "burst_waves": 0,
+      "burst_interval": 0.2,
+      "burst_cooldown": 1.8,
+      "burst_fan_count": 1,
+      "burst_spread": 0.0,
+      "burst_bullet_speed": 0.0,
+      "bullet_max_lifetime": 2.4,
+      "death_bloom_rings": 2,
+      "visual_shape": "hex",
+      "visual_color": [230, 70, 85],
+      "drop_tier": 2
+    },
+    "zako_fairy_large": {
+      "hp": 44,
+      "radius": 16.0,
+      "move_speed": 96.0,
+      "ai_mode": "chase",
+      "burst_waves": 4,
+      "burst_interval": 0.18,
+      "burst_cooldown": 1.5,
+      "burst_fan_count": 4,
+      "burst_spread": 0.16,
+      "burst_bullet_speed": 220.0,
+      "bullet_max_lifetime": 3.3,
+      "death_bloom_rings": 0,
+      "visual_shape": "circle",
+      "visual_color": [164, 98, 230],
+      "drop_tier": 3
+    },
+    "zako_fairy_rammer_large": {
+      "hp": 48,
+      "radius": 16.0,
+      "move_speed": 98.0,
+      "ai_mode": "charger",
+      "dash_trigger_distance": 250.0,
+      "dash_speed_multiplier": 2.4,
+      "burst_waves": 2,
+      "burst_interval": 0.18,
+      "burst_cooldown": 1.5,
+      "burst_fan_count": 3,
+      "burst_spread": 0.14,
+      "burst_bullet_speed": 210.0,
+      "bullet_max_lifetime": 3.0,
+      "death_bloom_rings": 0,
+      "visual_shape": "square",
+      "visual_color": [164, 98, 230],
+      "drop_tier": 3
+    },
+    "zako_fairy_sniper_large": {
+      "hp": 46,
+      "radius": 16.0,
+      "move_speed": 96.0,
+      "ai_mode": "kite_dodge",
+      "preferred_distance": 430.0,
+      "burst_waves": 5,
+      "burst_interval": 0.16,
+      "burst_cooldown": 1.6,
+      "burst_fan_count": 5,
+      "burst_spread": 0.18,
+      "burst_bullet_speed": 230.0,
+      "bullet_max_lifetime": 3.5,
+      "death_bloom_rings": 0,
+      "visual_shape": "triangle",
+      "visual_color": [164, 98, 230],
+      "avoid_player_bullets": true,
+      "drop_tier": 3
+    },
+    "zako_fairy_death_large": {
+      "hp": 50,
+      "radius": 16.0,
+      "move_speed": 90.0,
+      "ai_mode": "chase",
+      "burst_waves": 0,
+      "burst_interval": 0.2,
+      "burst_cooldown": 1.8,
+      "burst_fan_count": 1,
+      "burst_spread": 0.0,
+      "burst_bullet_speed": 0.0,
+      "bullet_max_lifetime": 2.8,
+      "death_bloom_rings": 4,
+      "visual_shape": "hex",
+      "visual_color": [230, 70, 85],
+      "drop_tier": 3
+    }
+  },
+  "enemy_pools": [
     {
-      "duration": 20.0,
-      "spawn_interval": 2.4,
-      "enemy_type": "fairy_basic",
-      "count": 1
+      "min_wave": 1,
+      "max_wave": 2,
+      "entries": [
+        {"enemy_type": "zako_fairy_small", "weight": 4},
+        {"enemy_type": "zako_fairy_sniper_small", "weight": 2}
+      ]
     },
     {
-      "duration": 25.0,
-      "spawn_interval": 1.6,
-      "enemy_type": "fairy_basic",
-      "count": 2
+      "min_wave": 3,
+      "max_wave": 4,
+      "entries": [
+        {"enemy_type": "zako_fairy_small", "weight": 3},
+        {"enemy_type": "zako_fairy_sniper_small", "weight": 3},
+        {"enemy_type": "zako_fairy_rammer_small", "weight": 2},
+        {"enemy_type": "zako_fairy_death_small", "weight": 1}
+      ]
     },
     {
-      "duration": 30.0,
-      "spawn_interval": 1.0,
-      "enemy_type": "fairy_sniper",
-      "count": 3
+      "min_wave": 5,
+      "max_wave": 6,
+      "entries": [
+        {"enemy_type": "zako_fairy_rammer_small", "weight": 2},
+        {"enemy_type": "zako_fairy_death_small", "weight": 1},
+        {"enemy_type": "zako_fairy_large", "weight": 3},
+        {"enemy_type": "zako_fairy_rammer_large", "weight": 2},
+        {"enemy_type": "zako_fairy_sniper_large", "weight": 2},
+        {"enemy_type": "zako_fairy_death_large", "weight": 1}
+      ]
+    },
+    {
+      "min_wave": 7,
+      "max_wave": 999999,
+      "entries": [
+        {"enemy_type": "zako_fairy_large", "weight": 3},
+        {"enemy_type": "zako_fairy_rammer_large", "weight": 2},
+        {"enemy_type": "zako_fairy_sniper_large", "weight": 3},
+        {"enemy_type": "zako_fairy_death_large", "weight": 2}
+      ]
     }
   ]
 }
-

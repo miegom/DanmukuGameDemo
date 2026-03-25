@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import pygame
@@ -21,8 +20,16 @@ class TitleScene(BaseScene):
         self._prompt_visible: bool = True
         self._ready_for_input: bool = False
         self._enter_elapsed: float = 0.0
-        font_config = ResourceManager.load_json("assets/data/ui.json")
-        self._title_font_path: str = str(font_config.get("title_font", "")).strip()
+
+        ui_config = ResourceManager.load_json("assets/data/ui.json")
+        text_map = ui_config.get("texts", {}) if isinstance(ui_config, dict) else {}
+        if not isinstance(text_map, dict):
+            text_map = {}
+
+        self._title_text = str(text_map.get("title", "东方生存弹幕"))
+        self._prompt_text = str(text_map.get("title_prompt", "按任意键开始"))
+        self._title_font: pygame.font.Font = ResourceManager.get_ui_font("title", 64)
+        self._prompt_font: pygame.font.Font = ResourceManager.get_ui_font("title_prompt", 28)
 
     def process_input(
         self,
@@ -30,7 +37,7 @@ class TitleScene(BaseScene):
         keys: pygame.key.ScancodeWrapper,
     ) -> None:
         """Switch to select scene on any key press."""
-        if not self._ready_for_input and not any(keys):
+        if not self._ready_for_input and not any(keys[i] for i in range(len(keys))):
             self._ready_for_input = True
         if not self._ready_for_input:
             return
@@ -58,35 +65,16 @@ class TitleScene(BaseScene):
         width, height = screen.get_size()
         screen.fill((10, 12, 26))
 
-        title_font = self._load_font(size=64)
-        prompt_font = self._load_font(size=28)
-
-        title_surface = title_font.render("TOUHOU SURVIVORS", True, (255, 220, 220))
+        title_surface = self._title_font.render(self._title_text, True, (255, 220, 220))
         title_rect = title_surface.get_rect(center=(width // 2, height // 2 - 70))
         screen.blit(title_surface, title_rect)
 
         if self._prompt_visible:
-            prompt_surface = prompt_font.render(
-                "Press Any Key to Start",
+            prompt_surface = self._prompt_font.render(
+                self._prompt_text,
                 True,
                 (220, 235, 255),
             )
             prompt_rect = prompt_surface.get_rect(center=(width // 2, height // 2 + 18))
             screen.blit(prompt_surface, prompt_rect)
-
-    def _load_font(self, size: int) -> pygame.font.Font:
-        """Load configured font with fallback to pygame default font."""
-        if not pygame.font.get_init():
-            pygame.font.init()
-
-        if not self._title_font_path:
-            return pygame.font.Font(None, size)
-
-        if not Path(self._title_font_path).exists():
-            return pygame.font.Font(None, size)
-
-        try:
-            return pygame.font.Font(self._title_font_path, size)
-        except Exception:
-            return pygame.font.Font(None, size)
 

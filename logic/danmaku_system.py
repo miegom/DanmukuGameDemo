@@ -102,6 +102,142 @@ class LinearMotion(MotionOperator):
 
 
 @dataclass(slots=True)
+class OrbitMotion(MotionOperator):
+    """Bullets orbit around the emitter (player)."""
+
+    angular_speed: float
+    center_x: float = 0.0
+    center_y: float = 0.0
+
+    def apply(self, pool: NumpyBulletPool, dt: float) -> None:
+        """Apply vectorized rotation around a center point."""
+        if pool.active_count == 0 or dt <= 0.0 or self.angular_speed == 0.0:
+            return
+
+        active = pool.active_count
+        theta = np.float32(self.angular_speed * dt)
+        cos_theta = np.float32(np.cos(theta))
+        sin_theta = np.float32(np.sin(theta))
+
+        # Relative positions
+        rx = pool.x[:active] - np.float32(self.center_x)
+        ry = pool.y[:active] - np.float32(self.center_y)
+
+        # Rotate positions
+        pool.x[:active] = np.float32(self.center_x) + (rx * cos_theta - ry * sin_theta)
+        pool.y[:active] = np.float32(self.center_y) + (rx * sin_theta + ry * cos_theta)
+
+        # Rotate velocities to keep them tangent or pointing out
+        vx = pool.vx[:active].copy()
+        vy = pool.vy[:active].copy()
+        pool.vx[:active] = (vx * cos_theta) - (vy * sin_theta)
+        pool.vy[:active] = (vx * sin_theta) + (vy * cos_theta)
+
+
+@dataclass(slots=True)
+class HomingMotion(MotionOperator):
+    """Bullets accelerate with radius-based target lock for one danmaku group."""
+
+    acceleration: float
+    max_distance: float = 0.0
+    lock_duration: float = 0.35
+    target_x: float = 0.0
+    target_y: float = 0.0
+
+    _enemy_x: np.ndarray = field(init=False, default_factory=lambda: np.empty(0, dtype=np.float32), repr=False)
+    _enemy_y: np.ndarray = field(init=False, default_factory=lambda: np.empty(0, dtype=np.float32), repr=False)
+    _lock_timer: float = field(init=False, default=0.0, repr=False)
+    _turn_boost: float = field(init=False, default=2.2, repr=False)
+
+    def set_enemy_points(self, enemy_x: np.ndarray, enemy_y: np.ndarray) -> None:
+        """Set enemy positions snapshot for this frame."""
+        if enemy_x.ndim != 1 or enemy_y.ndim != 1 or enemy_x.size != enemy_y.size:
+            self._enemy_x = np.empty(0, dtype=np.float32)
+            self._enemy_y = np.empty(0, dtype=np.float32)
+            return
+
+        self._enemy_x = enemy_x.astype(np.float32, copy=False)
+        self._enemy_y = enemy_y.astype(np.float32, copy=False)
+
+    def set_homing_params(self, *, radius: float, acceleration: float, lock_duration: float) -> None:
+        """Update runtime homing parameters."""
+        self.max_distance = max(0.0, float(radius))
+        self.acceleration = max(0.0, float(acceleration))
+        self.lock_duration = max(0.0, float(lock_duration))
+
+    def apply(self, pool: NumpyBulletPool, dt: float) -> None:
+        """Apply acceleration towards a locked target acquired within detection radius."""
+        if pool.active_count == 0 or dt <= 0.0 or self.acceleration <= 0.0:
+            return
+
+        self._lock_timer = max(0.0, self._lock_timer - dt)
+
+        if self._lock_timer <= 0.0:
+            self._try_acquire_target(pool)
+        elif self._enemy_x.size > 0:
+            self._refresh_target_from_snapshot()
+
+        if self._lock_timer <= 0.0:
+            return
+
+        active = pool.active_count
+        old_vx = pool.vx[:active].copy()
+        old_vy = pool.vy[:active].copy()
+        old_speed = np.sqrt(old_vx * old_vx + old_vy * old_vy)
+
+        dx = np.float32(self.target_x) - pool.x[:active]
+        dy = np.float32(self.target_y) - pool.y[:active]
+        dist = np.maximum(np.sqrt(dx * dx + dy * dy), np.float32(1.0e-6))
+        accel_scale = np.float32(self.acceleration * self._turn_boost * dt)
+        pool.vx[:active] += (dx / dist) * accel_scale
+        pool.vy[:active] += (dy / dist) * accel_scale
+
+        # Keep speed magnitude stable while allowing faster heading change.
+        new_speed = np.sqrt(pool.vx[:active] * pool.vx[:active] + pool.vy[:active] * pool.vy[:active])
+        safe_new = np.maximum(new_speed, np.float32(1.0e-6))
+        keep_speed = old_speed > np.float32(1.0e-6)
+        pool.vx[:active] = np.where(keep_speed, (pool.vx[:active] / safe_new) * old_speed, pool.vx[:active])
+        pool.vy[:active] = np.where(keep_speed, (pool.vy[:active] / safe_new) * old_speed, pool.vy[:active])
+
+    def _try_acquire_target(self, pool: NumpyBulletPool) -> None:
+        """Acquire a target when any active bullet has an enemy inside radius."""
+        if self.max_distance <= 0.0 or self.lock_duration <= 0.0:
+            return
+        if self._enemy_x.size == 0 or pool.active_count <= 0:
+            return
+
+        active = pool.active_count
+        bullet_x = pool.x[:active]
+        bullet_y = pool.y[:active]
+
+        dx = self._enemy_x[np.newaxis, :] - bullet_x[:, np.newaxis]
+        dy = self._enemy_y[np.newaxis, :] - bullet_y[:, np.newaxis]
+        dist_sq = (dx * dx) + (dy * dy)
+        in_range = dist_sq <= np.float32(self.max_distance * self.max_distance)
+        if not np.any(in_range):
+            return
+
+        masked = np.where(in_range, dist_sq, np.float32(np.inf))
+        nearest_flat = int(np.argmin(masked))
+        enemy_index = nearest_flat % self._enemy_x.size
+
+        self.target_x = float(self._enemy_x[enemy_index])
+        self.target_y = float(self._enemy_y[enemy_index])
+        self._lock_timer = self.lock_duration
+
+    def _refresh_target_from_snapshot(self) -> None:
+        """Keep target pointing at the nearest enemy to previous lock point."""
+        if self._enemy_x.size == 0:
+            return
+
+        dx = self._enemy_x - np.float32(self.target_x)
+        dy = self._enemy_y - np.float32(self.target_y)
+        index = int(np.argmin((dx * dx) + (dy * dy)))
+        self.target_x = float(self._enemy_x[index])
+        self.target_y = float(self._enemy_y[index])
+
+
+@dataclass(slots=True)
 class SwirlMotion(MotionOperator):
     """Rotate velocity vectors by a constant angular speed each frame."""
 
@@ -119,7 +255,6 @@ class SwirlMotion(MotionOperator):
 
         vx = pool.vx[:active].copy()
         vy = pool.vy[:active].copy()
-
         pool.vx[:active] = (vx * cos_theta) - (vy * sin_theta)
         pool.vy[:active] = (vx * sin_theta) + (vy * cos_theta)
 
@@ -133,6 +268,7 @@ class DanmakuGroup:
     motions: list[MotionOperator] = field(default_factory=list)
     max_bullets: int = 8192
     bounds: tuple[float, float, float, float] = (-256.0, 256.0, -256.0, 256.0)
+    max_lifetime: float = 3.2
 
     __pool: NumpyBulletPool = field(init=False, repr=False)
     __last_t: float | None = field(init=False, default=None, repr=False)
@@ -165,10 +301,26 @@ class DanmakuGroup:
 
         self._emit_batch(t=t, dt=dt, ex=ex, ey=ey, px=px, py=py)
 
+        active = self.__pool.active_count
+        if active > 0 and dt > 0.0:
+            self.__pool.life[:active] += np.float32(dt)
+
         for operator in self.motions:
             operator.apply(self.__pool, dt)
 
         self._cull_out_of_bounds()
+
+    def emit_burst(self, shots: int, t: float, ex: float, ey: float, px: float, py: float) -> None:
+        """Emit a fixed number of shots immediately, without changing motion update order."""
+        if shots <= 0:
+            return
+
+        fire_rate = float(self.emission.fire_rate)
+        if fire_rate <= 0.0:
+            return
+
+        burst_dt = np.float32(shots / fire_rate)
+        self._emit_batch(t=t, dt=float(burst_dt), ex=ex, ey=ey, px=px, py=py)
 
     def _emit_batch(
         self,
@@ -230,5 +382,6 @@ class DanmakuGroup:
             & (y_vals >= y_min)
             & (y_vals <= y_max)
         )
+        if self.max_lifetime > 0.0:
+            valid_mask &= self.__pool.life[:active] <= np.float32(self.max_lifetime)
         self.__pool.filter_active(valid_mask)
-

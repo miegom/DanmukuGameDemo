@@ -20,6 +20,9 @@ def run_smoke_test() -> None:
     )
 
     assert manager.wave_count >= 1
+    assert manager.get_spawn_cap_for_wave(1) == 6
+    assert manager.get_spawn_cap_for_wave(4) == 9
+    assert manager.get_spawn_cap_for_wave(7) == 10
 
     total_spawned = 0
     simulated_time = 0.0

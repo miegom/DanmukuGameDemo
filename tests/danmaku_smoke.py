@@ -5,6 +5,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import numpy as np
+
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
@@ -26,6 +28,7 @@ def run_smoke_test() -> None:
         motions=[SwirlMotion(angular_speed=0.8), LinearMotion()],
         max_bullets=4096,
         bounds=(-300.0, 300.0, -300.0, 300.0),
+        max_lifetime=0.9,
     )
 
     time_value = 0.0
@@ -35,6 +38,8 @@ def run_smoke_test() -> None:
 
     active_count = group.pool.active_count
     assert 0 <= active_count <= group.pool.max_size
+    if active_count > 0:
+        assert bool(np.all(group.pool.life[:active_count] <= np.float32(group.max_lifetime + 1.0e-4)))
     print(f"smoke_test_ok active_count={active_count}")
 
 

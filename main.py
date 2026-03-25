@@ -13,7 +13,7 @@ from scenes.title_scene import TitleScene
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
-WINDOW_TITLE = "Touhou Survivors"
+WINDOW_TITLE = "东方生存弹幕"
 FEATURE_TEST_FLAG = "--feature-test"
 
 
@@ -114,4 +114,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

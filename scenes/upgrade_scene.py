@@ -7,6 +7,7 @@ from typing import Any
 import pygame
 
 from core.logger import logger
+from core.resource_mgr import ResourceManager
 from logic.entity import Player
 from logic.roguelite_system import UpgradeManager
 from scenes.base_scene import BaseScene
@@ -21,6 +22,10 @@ class UpgradeScene(BaseScene):
         self._ready_for_input: bool = False
         self._enter_elapsed: float = 0.0
         self._option_rects: list[pygame.Rect] = []
+        self._overlay_surface: pygame.Surface | None = None
+        self._title_font = ResourceManager.get_ui_font("upgrade_title", 62)
+        self._text_font = ResourceManager.get_ui_font("upgrade_text", 32)
+        self._hint_font = ResourceManager.get_ui_font("upgrade_hint", 28)
 
         manager = self.context.get("upgrade_manager")
         if isinstance(manager, UpgradeManager):
@@ -29,7 +34,11 @@ class UpgradeScene(BaseScene):
             self._upgrade_manager = UpgradeManager()
             self.context["upgrade_manager"] = self._upgrade_manager
 
-        self._choices: list[dict[str, Any]] = self._upgrade_manager.get_random_choices(3)
+        player_for_choices = self.context.get("player")
+        if isinstance(player_for_choices, Player):
+            self._choices = self._upgrade_manager.get_random_choices_for_player(player_for_choices, 3)
+        else:
+            self._choices = self._upgrade_manager.get_random_choices(3)
 
         gameplay_scene = self.context.get("previous_gameplay_scene")
         if isinstance(gameplay_scene, BaseScene):
@@ -43,7 +52,7 @@ class UpgradeScene(BaseScene):
         keys: pygame.key.ScancodeWrapper,
     ) -> None:
         """Handle mouse or keyboard selection and resume gameplay."""
-        if not self._ready_for_input and not any(keys):
+        if not self._ready_for_input and not any(keys[i] for i in range(len(keys))):
             self._ready_for_input = True
         if not self._ready_for_input:
             return
@@ -72,9 +81,6 @@ class UpgradeScene(BaseScene):
 
     def draw(self, screen: pygame.Surface) -> None:
         """Render dimmed background and centered 3-choice cards."""
-        if not pygame.font.get_init():
-            pygame.font.init()
-
         snapshot = self.context.get("gameplay_snapshot")
         if isinstance(snapshot, pygame.Surface):
             screen.blit(snapshot, (0, 0))
@@ -82,15 +88,12 @@ class UpgradeScene(BaseScene):
             screen.fill((14, 12, 20))
 
         width, height = screen.get_size()
-        overlay = pygame.Surface((width, height), flags=pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))
-        screen.blit(overlay, (0, 0))
+        if self._overlay_surface is None or self._overlay_surface.get_size() != (width, height):
+            self._overlay_surface = pygame.Surface((width, height), flags=pygame.SRCALPHA)
+            self._overlay_surface.fill((0, 0, 0, 180))
+        screen.blit(self._overlay_surface, (0, 0))
 
-        title_font = pygame.font.Font(None, 62)
-        text_font = pygame.font.Font(None, 32)
-        hint_font = pygame.font.Font(None, 28)
-
-        title_surface = title_font.render("CHOOSE AN UPGRADE", True, (245, 228, 165))
+        title_surface = self._title_font.render("选择一项强化", True, (245, 228, 165))
         screen.blit(title_surface, title_surface.get_rect(center=(width // 2, 120)))
 
         self._option_rects = self._build_option_rects(width, height, len(self._choices))
@@ -107,13 +110,14 @@ class UpgradeScene(BaseScene):
             choice = self._choices[index]
             name = str(choice.get("name", f"Option {index + 1}"))
             description = str(choice.get("description", "No description."))
+            channel = self._format_channel_tag(choice)
 
-            title_text = text_font.render(f"[{index + 1}] {name}", True, (240, 238, 255))
-            desc_text = hint_font.render(description, True, (210, 210, 240))
+            title_text = self._text_font.render(f"[{index + 1}] {channel} {name}", True, (240, 238, 255))
+            desc_text = self._hint_font.render(description, True, (210, 210, 240))
             screen.blit(title_text, title_text.get_rect(midtop=(rect.centerx, rect.top + 16)))
             screen.blit(desc_text, desc_text.get_rect(midtop=(rect.centerx, rect.top + 54)))
 
-        hint_surface = hint_font.render("Click card or press 1 / 2 / 3", True, (196, 206, 240))
+        hint_surface = self._hint_font.render("点击卡片或按 1 / 2 / 3", True, (196, 206, 240))
         screen.blit(hint_surface, hint_surface.get_rect(center=(width // 2, height - 58)))
 
     def _build_option_rects(self, width: int, height: int, count: int) -> list[pygame.Rect]:
@@ -155,6 +159,21 @@ class UpgradeScene(BaseScene):
         self._upgrade_manager.apply_upgrade(upgrade, player)
         self._resume_gameplay()
 
+    def _format_channel_tag(self, choice: dict[str, Any]) -> str:
+        """Return display tag for upgrade channel."""
+        channel = str(choice.get("attack_channel", "")).strip().lower()
+        if channel == "spell":
+            return "[符卡]"
+        if channel == "basic":
+            return "[普攻]"
+        if channel == "common":
+            return "[通用]"
+
+        param = str(choice.get("param", "")).strip().lower()
+        if "_spell_" in param:
+            return "[符卡]"
+        return "[普攻]"
+
     def _resume_gameplay(self) -> None:
         """Return to gameplay while preserving existing runtime state."""
         from scenes.gameplay_scene import GameplayScene
@@ -175,4 +194,3 @@ class UpgradeScene(BaseScene):
         logger.warning("UpgradeScene fallback: previous gameplay scene missing; creating new GameplayScene.")
 
         self.switch_to(GameplayScene)
-

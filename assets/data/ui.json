@@ -1,4 +1,36 @@
 {
-  "title_font": ""
+  "title_font": "assets/fonts/BoutiqueBitmap7x7_Scan_Line.ttf",
+  "fonts": {
+    "default_path": "assets/fonts/BoutiqueBitmap7x7_Scan_Line.ttf",
+    "sizes": {
+      "title": 64,
+      "title_prompt": 28,
+      "select_title": 56,
+      "select_hint": 30,
+      "select_name": 44,
+      "select_desc": 28,
+      "upgrade_title": 62,
+      "upgrade_text": 32,
+      "upgrade_hint": 28,
+      "gameover_title": 80,
+      "gameover_info": 36,
+      "hud": 24
+    }
+  },
+  "texts": {
+    "title": "东方-弹幕-幸存者",
+    "title_prompt": "按任意键开始",
+    "select_title": "请选择角色",
+    "select_hint": "左右/AD切换，回车确认",
+    "select_reimu": "灵梦：奇数狙击弹 + 阴阳玉符卡",
+    "select_morisa": "魔理沙：激光普攻 + 强化激光符卡",
+    "hud_wave": "波次",
+    "hud_lv": "等级",
+    "hud_exp": "经验",
+    "hud_hp": "生命",
+    "hud_enemies": "敌人数",
+    "hud_orbs": "经验球",
+    "spell_ready": "符卡可用",
+    "spell_cd": "符卡冷却"
+  }
 }
-

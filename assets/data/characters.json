@@ -1,4 +1,40 @@
 {
-  "characters": []
+  "characters": [
+    {
+      "id": "reimu",
+      "display_name": "灵梦",
+      "basic_mode": "danmaku",
+      "basic_bullet_count": 5,
+      "basic_bullet_spread": 0.52,
+      "basic_fire_rate": 11.0,
+      "basic_bullet_speed": 260.0,
+      "basic_bullet_lifetime": 2.85,
+      "spell_mode": "orbs",
+      "spell_orb_count": 5,
+      "spell_orb_speed": 240.0,
+      "spell_orb_radius": 18.0,
+      "spell_orb_damage": 16,
+      "spell_orb_clear_radius": 34.0,
+      "spell_bullet_lifetime": 3.2,
+      "icon_outer_color": [220, 50, 70],
+      "icon_inner_color": [255, 255, 255]
+    },
+    {
+      "id": "morisa",
+      "display_name": "魔理沙",
+      "basic_mode": "laser",
+      "basic_laser_interval": 1.0,
+      "basic_laser_width": 16.0,
+      "basic_laser_damage": 10,
+      "basic_laser_range": 980.0,
+      "basic_bullet_lifetime": 2.2,
+      "spell_mode": "laser_boost",
+      "spell_duration": 5.0,
+      "spell_bullet_lifetime": 3.0,
+      "spell_laser_width_multiplier": 2.8,
+      "spell_laser_damage_multiplier": 2.8,
+      "icon_outer_color": [250, 220, 50],
+      "icon_inner_color": [20, 20, 20]
+    }
+  ]
 }
-

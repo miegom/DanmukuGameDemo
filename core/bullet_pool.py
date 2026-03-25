@@ -15,6 +15,7 @@ class PoolView:
     y: np.ndarray
     vx: np.ndarray
     vy: np.ndarray
+    life: np.ndarray
 
 
 class NumpyBulletPool:
@@ -43,6 +44,7 @@ class NumpyBulletPool:
         self.y: np.ndarray = np.empty(max_size, dtype=np.float32)
         self.vx: np.ndarray = np.empty(max_size, dtype=np.float32)
         self.vy: np.ndarray = np.empty(max_size, dtype=np.float32)
+        self.life: np.ndarray = np.empty(max_size, dtype=np.float32)
 
     def _active_end(self) -> int:
         """Return a sanitized active index inside ``[0, max_size]``."""
@@ -61,6 +63,7 @@ class NumpyBulletPool:
             y=self.y[:end],
             vx=self.vx[:end],
             vy=self.vy[:end],
+            life=self.life[:end],
         )
 
     def spawn_batch(
@@ -69,6 +72,7 @@ class NumpyBulletPool:
         y_arr: np.ndarray,
         vx_arr: np.ndarray,
         vy_arr: np.ndarray,
+        life_arr: np.ndarray | None = None,
     ) -> int:
         """Append a bullet batch into the pool.
 
@@ -109,6 +113,13 @@ class NumpyBulletPool:
         self.y[start:end] = y_flat[:insert_count].astype(np.float32, copy=False)
         self.vx[start:end] = vx_flat[:insert_count].astype(np.float32, copy=False)
         self.vy[start:end] = vy_flat[:insert_count].astype(np.float32, copy=False)
+        if life_arr is None:
+            self.life[start:end] = np.float32(0.0)
+        else:
+            life_flat = np.ravel(life_arr)
+            if life_flat.shape != x_flat.shape:
+                raise ValueError("life_arr must share the same shape as spawn arrays.")
+            self.life[start:end] = life_flat[:insert_count].astype(np.float32, copy=False)
 
         self.active_count = end
         return insert_count
@@ -138,6 +149,7 @@ class NumpyBulletPool:
             self.y[:survivor_count] = self.y[active_slice][valid_mask]
             self.vx[:survivor_count] = self.vx[active_slice][valid_mask]
             self.vy[:survivor_count] = self.vy[active_slice][valid_mask]
+            self.life[:survivor_count] = self.life[active_slice][valid_mask]
 
         self.active_count = survivor_count
         return survivor_count

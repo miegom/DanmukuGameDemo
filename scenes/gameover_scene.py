@@ -6,6 +6,7 @@ from typing import Any
 
 import pygame
 
+from core.resource_mgr import ResourceManager
 from scenes.base_scene import BaseScene
 
 
@@ -17,6 +18,8 @@ class GameOverScene(BaseScene):
         super().__init__(context)
         self._ready_for_input: bool = False
         self._enter_elapsed: float = 0.0
+        self._title_font = ResourceManager.get_ui_font("gameover_title", 80)
+        self._info_font = ResourceManager.get_ui_font("gameover_info", 36)
 
     def process_input(
         self,
@@ -24,7 +27,7 @@ class GameOverScene(BaseScene):
         keys: pygame.key.ScancodeWrapper,
     ) -> None:
         """Return to title scene when any key is pressed."""
-        if not self._ready_for_input and not any(keys):
+        if not self._ready_for_input and not any(keys[i] for i in range(len(keys))):
             self._ready_for_input = True
         if not self._ready_for_input:
             return
@@ -45,25 +48,19 @@ class GameOverScene(BaseScene):
 
     def draw(self, screen: pygame.Surface) -> None:
         """Render game over title and final score information."""
-        if not pygame.font.get_init():
-            pygame.font.init()
-
         width, height = screen.get_size()
         screen.fill((18, 4, 10))
 
-        title_font = pygame.font.Font(None, 80)
-        info_font = pygame.font.Font(None, 36)
-
         score_value = int(self.context.get("score", 0))
 
-        title_surface = title_font.render("GAME OVER", True, (255, 110, 120))
-        score_surface = info_font.render(
-            f"Score: {score_value}",
+        title_surface = self._title_font.render("游戏结束", True, (255, 110, 120))
+        score_surface = self._info_font.render(
+            f"得分: {score_value}",
             True,
             (240, 230, 230),
         )
-        hint_surface = info_font.render(
-            "Press Any Key to Return",
+        hint_surface = self._info_font.render(
+            "按任意键返回标题",
             True,
             (230, 230, 255),
         )
@@ -71,4 +68,3 @@ class GameOverScene(BaseScene):
         screen.blit(title_surface, title_surface.get_rect(center=(width // 2, height // 2 - 60)))
         screen.blit(score_surface, score_surface.get_rect(center=(width // 2, height // 2 + 8)))
         screen.blit(hint_surface, hint_surface.get_rect(center=(width // 2, height // 2 + 54)))
-
