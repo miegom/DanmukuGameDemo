@@ -16,6 +16,8 @@
       "spell_orb_damage": 16,
       "spell_orb_clear_radius": 34.0,
       "spell_bullet_lifetime": 3.2,
+      "pickup_attract_radius_multiplier": 2.0,
+      "pickup_attract_strength": 66.0,
       "icon_outer_color": [220, 50, 70],
       "icon_inner_color": [255, 255, 255]
     },
@@ -33,6 +35,8 @@
       "spell_bullet_lifetime": 3.0,
       "spell_laser_width_multiplier": 2.8,
       "spell_laser_damage_multiplier": 2.8,
+      "pickup_attract_radius_multiplier": 2.0,
+      "pickup_attract_strength": 66.0,
       "icon_outer_color": [250, 220, 50],
       "icon_inner_color": [20, 20, 20]
     }

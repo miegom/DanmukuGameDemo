@@ -1,0 +1,82 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # 当推送以 v 开头的标签时触发
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: DanmukuGameDemo-Windows
+            executable_name: DanmukuGameDemo-Windows
+            executable_path: dist/DanmukuGameDemo-Windows/DanmukuGameDemo-Windows.exe
+          - os: ubuntu-latest
+            artifact_name: DanmukuGameDemo-Linux
+            executable_name: DanmukuGameDemo-Linux
+            executable_path: dist/DanmukuGameDemo-Linux/DanmukuGameDemo-Linux
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller (Windows)
+        if: matrix.os == 'windows-latest'
+        run: pyinstaller --noconfirm --clean --noconsole --onedir --name "${{ matrix.executable_name }}" --add-data "assets;assets" main.py
+
+      - name: Build with PyInstaller (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxcb-xinerama0
+          pyinstaller --noconfirm --clean --noconsole --onedir --name "${{ matrix.executable_name }}" --add-data "assets:assets" main.py
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.executable_path }}
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 必须赋予写入 Release 的权限
+    steps:
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DanmukuGameDemo-Windows
+          path: ./release-files
+
+      - name: Download Linux Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DanmukuGameDemo-Linux
+          path: ./release-files
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./release-files/DanmukuGameDemo-Windows.exe
+            ./release-files/DanmukuGameDemo-Linux
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

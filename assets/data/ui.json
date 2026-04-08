@@ -19,7 +19,8 @@
   },
   "texts": {
     "title": "东方-弹幕-幸存者",
-    "title_prompt": "按任意键开始",
+    "title_prompt": "按回车开始（输入 devmode 开启开发模式）",
+    "title_devmode_hint": "开发模式已启用",
     "select_title": "请选择角色",
     "select_hint": "左右/AD切换，回车确认",
     "select_reimu": "灵梦：奇数狙击弹 + 阴阳玉符卡",
@@ -31,6 +32,8 @@
     "hud_enemies": "敌人数",
     "hud_orbs": "经验球",
     "spell_ready": "符卡可用",
-    "spell_cd": "符卡冷却"
+    "spell_cd": "符卡冷却",
+    "pause_label": "暂停 PAUSE",
+    "pause_hint": "按 ESC 继续"
   }
 }

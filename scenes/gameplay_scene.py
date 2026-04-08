@@ -107,6 +107,8 @@ class GameplayScene(BaseScene):
         self._hud_font: pygame.font.Font | None = None
         self._score_font: pygame.font.Font | None = None
         self._score_overlay: pygame.Surface | None = None
+        self._pause_overlay: pygame.Surface | None = None
+        self._is_paused: bool = False
 
         self._basic_laser_cooldown: float = 0.0
         self._spell_boost_remaining: float = 0.0
@@ -126,6 +128,11 @@ class GameplayScene(BaseScene):
         self._reimu_spell_homing_duration: float = 1.4
         self._basic_sprite_size: int = self._player_bullet_sprite.get_width()
         self._reimu_spell_orbs: list[dict[str, Any]] = []
+        self._pickup_attract_radius: float = max(
+            self._exp_pickup_radius,
+            self.player.radius * max(0.0, self._character_profile.pickup_attract_radius_multiplier),
+        )
+        self._pickup_attract_strength: float = max(0.0, self._character_profile.pickup_attract_strength)
 
         ui_config = ResourceManager.load_json("assets/data/ui.json")
         text_map = ui_config.get("texts", {}) if isinstance(ui_config, dict) else {}
@@ -141,6 +148,16 @@ class GameplayScene(BaseScene):
         keys: pygame.key.ScancodeWrapper,
     ) -> None:
         """Cache movement and mouse-control state."""
+        for event in events:
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                self._is_paused = not self._is_paused
+
+        if self._is_paused:
+            self._input_x = 0.0
+            self._input_y = 0.0
+            self.player.is_firing = False
+            return
+
         self._input_x = float(keys[pygame.K_d] or keys[pygame.K_RIGHT]) - float(
             keys[pygame.K_a] or keys[pygame.K_LEFT]
         )
@@ -169,6 +186,8 @@ class GameplayScene(BaseScene):
     def update(self, dt: float) -> None:
         """Run world simulation step and resolve collisions."""
         if dt <= 0.0:
+            return
+        if self._is_paused:
             return
 
         self.frame_timer += 1
@@ -231,6 +250,7 @@ class GameplayScene(BaseScene):
         )
 
         self._resolve_player_bullet_hits()
+        self._attract_pickups(dt)
         self._collect_pickups()
 
         if self.player.level_up:
@@ -268,6 +288,22 @@ class GameplayScene(BaseScene):
         self._draw_exp_orbs(screen)
         self._draw_scoreboard(screen)
         self._draw_hud(screen)
+        if self._is_paused:
+            self._draw_pause_overlay(screen)
+
+    def _draw_pause_overlay(self, screen: pygame.Surface) -> None:
+        """Draw pause mask and center text without advancing game logic."""
+        width, height = screen.get_size()
+        if self._pause_overlay is None or self._pause_overlay.get_size() != (width, height):
+            self._pause_overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+            self._pause_overlay.fill((0, 0, 0, 140))
+
+        screen.blit(self._pause_overlay, (0, 0))
+        font = self._get_hud_font()
+        title = font.render(self._text("pause_label", "暂停 PAUSE"), True, (245, 245, 245))
+        hint = font.render(self._text("pause_hint", "按 ESC 继续"), True, (210, 220, 230))
+        screen.blit(title, title.get_rect(center=(width // 2, height // 2 - 14)))
+        screen.blit(hint, hint.get_rect(center=(width // 2, height // 2 + 16)))
 
     def _configure_player_loadout(self, profile: CharacterProfile) -> None:
         """Set player weapons according to selected character profile."""
@@ -1014,6 +1050,43 @@ class GameplayScene(BaseScene):
         keep_mask = ~pickup_mask
         self.exp_orbs = [orb for orb, keep in zip(self.exp_orbs, keep_mask.tolist()) if keep]
 
+    def _attract_pickups(self, dt: float) -> None:
+        """Apply weak magnetic pull to nearby pickups to ease collection."""
+        if dt <= 0.0 or not self.exp_orbs or self._pickup_attract_strength <= 0.0:
+            return
+
+        attract_radius = max(self._exp_pickup_radius, self._pickup_attract_radius)
+        if attract_radius <= 0.0:
+            return
+
+        orb_x = np.asarray([orb.x for orb in self.exp_orbs], dtype=np.float32)
+        orb_y = np.asarray([orb.y for orb in self.exp_orbs], dtype=np.float32)
+
+        to_player_x = np.float32(self.player.x) - orb_x
+        to_player_y = np.float32(self.player.y) - orb_y
+        dist_sq = (to_player_x * to_player_x) + (to_player_y * to_player_y)
+        dist = np.sqrt(np.maximum(dist_sq, np.float32(1.0e-6)))
+        in_range = dist_sq <= np.float32(attract_radius * attract_radius)
+        if not np.any(in_range):
+            return
+
+        falloff = 1.0 - np.clip(dist / np.float32(attract_radius), np.float32(0.0), np.float32(1.0))
+        step = np.float32(self._pickup_attract_strength * dt) * (np.float32(0.35) + (falloff * np.float32(0.65)))
+        step = np.minimum(step, np.maximum(np.float32(0.0), dist - np.float32(self.player.hitbox_radius * 0.5)))
+        move_mask = in_range & (dist > np.float32(1.0e-6)) & (step > np.float32(0.0))
+        if not np.any(move_mask):
+            return
+
+        inv_dist = np.zeros_like(dist)
+        inv_dist[move_mask] = np.float32(1.0) / dist[move_mask]
+
+        orb_x[move_mask] += to_player_x[move_mask] * inv_dist[move_mask] * step[move_mask]
+        orb_y[move_mask] += to_player_y[move_mask] * inv_dist[move_mask] * step[move_mask]
+
+        for index in np.flatnonzero(move_mask).tolist():
+            self.exp_orbs[index].x = float(orb_x[index])
+            self.exp_orbs[index].y = float(orb_y[index])
+
     def _draw_grid(self, screen: pygame.Surface) -> None:
         """Draw a camera-shifted grid as placeholder stage background."""
         grid_color = (18, 22, 32)
@@ -1127,7 +1200,143 @@ class GameplayScene(BaseScene):
             pygame.draw.circle(screen, color, (int(ox), int(oy)), 4)
 
     def _draw_hud(self, screen: pygame.Surface) -> None:
-        """Render HUD with localized Chinese labels."""
+        """Render gameplay HUD: bottom status bars + optional dev detail overlay."""
+        self._draw_bottom_status_hud(screen)
+        if self._is_dev_mode():
+            self._draw_debug_hud(screen)
+
+    def _draw_bottom_status_hud(self, screen: pygame.Surface) -> None:
+        """Draw Zelda/Isaac-like hearts, spell stars and segmented XP bar near bottom."""
+        width, height = screen.get_size()
+        font = self._get_score_font()
+
+        bar_w = min(860, width - 120)
+        bar_h = 14
+        bar_x = (width - bar_w) // 2
+        bar_y = height - 32
+
+        bg = pygame.Surface((bar_w + 8, bar_h + 8), pygame.SRCALPHA)
+        bg.fill((8, 12, 10, 165))
+        screen.blit(bg, (bar_x - 4, bar_y - 4))
+
+        pygame.draw.rect(screen, (24, 42, 24), (bar_x, bar_y, bar_w, bar_h), border_radius=4)
+        exp_required = max(1, self.player.level * 100)
+        exp_ratio = float(np.clip(self.player.exp / float(exp_required), 0.0, 1.0))
+        fill_w = int(round(bar_w * exp_ratio))
+        if fill_w > 0:
+            pygame.draw.rect(screen, (78, 215, 98), (bar_x, bar_y, fill_w, bar_h), border_radius=4)
+
+        # Segments for better read at a glance.
+        segments = 24
+        for idx in range(1, segments):
+            sx = bar_x + int((bar_w * idx) / segments)
+            pygame.draw.line(screen, (30, 58, 36), (sx, bar_y + 2), (sx, bar_y + bar_h - 2), 1)
+
+        lv_text = font.render(f"Lv {self.player.level}", True, (220, 245, 220))
+        screen.blit(lv_text, lv_text.get_rect(midbottom=(width // 2, bar_y - 4)))
+
+        icon_y = bar_y - 14
+        self._draw_heart_status_icons(screen, start_x=48, anchor_y=icon_y)
+        self._draw_spell_status_icons(screen, right_x=width - 48, anchor_y=icon_y)
+
+    def _draw_heart_status_icons(self, screen: pygame.Surface, start_x: int, anchor_y: int) -> None:
+        """Draw red heart HP icons on the lower-left, wrapping every 8 hearts."""
+        hp_count = max(0, int(self.player.current_hp))
+        max_hp = max(1, int(self.player.max_hp))
+        total_slots = max(hp_count, max_hp)
+        icon_gap_x = 20
+        icon_gap_y = 18
+        row_cap = 8
+
+        for index in range(total_slots):
+            row = index // row_cap
+            col = index % row_cap
+            cx = start_x + col * icon_gap_x
+            cy = anchor_y - row * icon_gap_y
+            filled = index < hp_count
+            color = (235, 72, 92) if filled else (78, 42, 50)
+            self._draw_status_heart(screen, center=(cx, cy), color=color, scale=1.0)
+
+    def _draw_spell_status_icons(self, screen: pygame.Surface, right_x: int, anchor_y: int) -> None:
+        """Draw dropped (blue) and innate (purple blink) spell stars on lower-right."""
+        dropped = max(0, int(self.player.drop_spell_stock))
+        innate_stock = max(0, int(self.player.innate_spell_stock))
+        innate_slots = max(1, int(self.player.innate_spell_stock_max))
+        total = dropped + innate_slots
+
+        icon_gap_x = 20
+        icon_gap_y = 18
+        row_cap = 8
+        blink_on = np.sin(self.time_value * 8.0) > 0.0
+
+        for index in range(total):
+            row = index // row_cap
+            col = index % row_cap
+            cx = right_x - col * icon_gap_x
+            cy = anchor_y - row * icon_gap_y
+
+            if index < dropped:
+                color = (88, 175, 255)
+            else:
+                innate_index = index - dropped
+                filled = innate_index < innate_stock
+                if filled and blink_on:
+                    color = (240, 170, 255)
+                elif filled:
+                    color = (178, 92, 215)
+                else:
+                    color = (66, 46, 78)
+
+            self._draw_status_star(screen, center=(cx, cy), radius=7, color=color)
+
+    @staticmethod
+    def _draw_status_heart(
+        screen: pygame.Surface,
+        center: tuple[int, int],
+        color: tuple[int, int, int],
+        scale: float,
+    ) -> None:
+        """Draw one compact heart icon for the status HUD."""
+        x_pos, y_pos = center
+        left_r = max(2, int(round(3.0 * scale)))
+        right_r = left_r
+        wing_dx = max(2, int(round(3.0 * scale)))
+        wing_dy = max(1, int(round(2.0 * scale)))
+        tip_dy = max(4, int(round(7.0 * scale)))
+        edge_dx = max(5, int(round(7.0 * scale)))
+
+        pygame.draw.circle(screen, color, (x_pos - wing_dx, y_pos - wing_dy), left_r)
+        pygame.draw.circle(screen, color, (x_pos + wing_dx, y_pos - wing_dy), right_r)
+        pygame.draw.polygon(
+            screen,
+            color,
+            [
+                (x_pos - edge_dx, y_pos - wing_dy),
+                (x_pos + edge_dx, y_pos - wing_dy),
+                (x_pos, y_pos + tip_dy),
+            ],
+        )
+
+    @staticmethod
+    def _draw_status_star(
+        screen: pygame.Surface,
+        center: tuple[int, int],
+        radius: int,
+        color: tuple[int, int, int],
+    ) -> None:
+        """Draw one filled five-point star icon for spell stock."""
+        x_pos, y_pos = center
+        outer = float(max(3, radius))
+        inner = outer * 0.44
+        points: list[tuple[int, int]] = []
+        for idx in range(10):
+            angle = (-np.pi / 2.0) + idx * (np.pi / 5.0)
+            rr = outer if idx % 2 == 0 else inner
+            points.append((int(round(x_pos + np.cos(angle) * rr)), int(round(y_pos + np.sin(angle) * rr))))
+        pygame.draw.polygon(screen, color, points)
+
+    def _draw_debug_hud(self, screen: pygame.Surface) -> None:
+        """Render legacy detailed debug stats in top-left for developer mode."""
         font = self._get_hud_font()
         wave_text = self._format_wave_status()
         exp_required = self.player.level * 100
@@ -1199,6 +1408,10 @@ class GameplayScene(BaseScene):
         """Get localized ui text with fallback."""
         value = self._ui_texts.get(key, fallback)
         return str(value)
+
+    def _is_dev_mode(self) -> bool:
+        """Return whether developer mode overlay is enabled from shared context."""
+        return bool(self.context.get("dev_mode", False))
 
     def _get_hud_font(self) -> pygame.font.Font:
         """Return cached HUD font."""

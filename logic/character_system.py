@@ -36,6 +36,8 @@ class CharacterProfile:
     spell_laser_damage_multiplier: float
     icon_outer_color: tuple[int, int, int]
     icon_inner_color: tuple[int, int, int]
+    pickup_attract_radius_multiplier: float
+    pickup_attract_strength: float
 
 
 def load_character_profiles(path: str = "assets/data/characters.json") -> dict[str, CharacterProfile]:
@@ -99,6 +101,8 @@ def _parse_profile(raw: dict[str, object]) -> CharacterProfile | None:
             spell_laser_damage_multiplier=max(1.0, float(raw.get("spell_laser_damage_multiplier", 2.5))),
             icon_outer_color=icon_outer,
             icon_inner_color=icon_inner,
+            pickup_attract_radius_multiplier=max(0.0, float(raw.get("pickup_attract_radius_multiplier", 2.0))),
+            pickup_attract_strength=max(0.0, float(raw.get("pickup_attract_strength", 66.0))),
         )
     except (TypeError, ValueError):
         return None
@@ -144,6 +148,8 @@ def _default_reimu_profile() -> CharacterProfile:
         spell_laser_damage_multiplier=2.5,
         icon_outer_color=(220, 50, 70),
         icon_inner_color=(255, 255, 255),
+        pickup_attract_radius_multiplier=2.0,
+        pickup_attract_strength=66.0,
     )
 
 
@@ -174,5 +180,7 @@ def _default_morisa_profile() -> CharacterProfile:
         spell_laser_damage_multiplier=2.8,
         icon_outer_color=(250, 220, 50),
         icon_inner_color=(20, 20, 20),
+        pickup_attract_radius_multiplier=2.0,
+        pickup_attract_strength=66.0,
     )
 

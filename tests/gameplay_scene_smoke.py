@@ -14,6 +14,7 @@ if str(ROOT_DIR) not in sys.path:
 
 from scenes.gameover_scene import GameOverScene
 from scenes.gameplay_scene import GameplayScene
+from logic.entity import ExpOrb
 
 
 def run_smoke_test() -> None:
@@ -46,6 +47,30 @@ def run_smoke_test() -> None:
     assert morisa_scene._basic_laser_cooldown < morisa_scene._base_morisa_laser_interval * 0.2
 
     scene = GameplayScene(context={"screen_width": 960, "screen_height": 540, "score": 0})
+
+    # Verify weak pickup attraction moves nearby drops closer before pickup.
+    scene.player.x = 0.0
+    scene.player.y = 0.0
+    scene.exp_orbs = [ExpOrb(x=15.5, y=0.0, value=1, kind="exp")]
+    scene._exp_pickup_radius = 10.0
+    before_orb_x = scene.exp_orbs[0].x
+    scene.update(1.0 / 60.0)
+    assert scene.exp_orbs, "Orb should not be instantly collected during attraction test."
+    assert scene.exp_orbs[0].x < before_orb_x
+
+    # Verify ESC pause freezes world simulation.
+    pause_event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE)
+    scene.process_input([pause_event], pygame.key.get_pressed())
+    assert scene._is_paused is True
+    paused_time = scene.time_value
+    paused_frame = scene.frame_timer
+    scene.update(1.0 / 60.0)
+    assert scene.time_value == paused_time
+    assert scene.frame_timer == paused_frame
+
+    resume_event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE)
+    scene.process_input([resume_event], pygame.key.get_pressed())
+    assert scene._is_paused is False
 
     # Warm up regular update/draw path.
     for _ in range(20):
