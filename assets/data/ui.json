@@ -17,6 +17,14 @@
       "hud": 24
     }
   },
+  "enemy_hp_bar": {
+    "height": 4,
+    "offset_y": 8,
+    "width_scale": 2.2,
+    "bg_color": [52, 20, 24],
+    "fg_color": [255, 82, 92],
+    "border_color": [245, 245, 245]
+  },
   "texts": {
     "title": "东方-弹幕-幸存者",
     "title_prompt": "按回车开始（输入 devmode 开启开发模式）",
@@ -33,6 +41,7 @@
     "hud_orbs": "经验球",
     "spell_ready": "符卡可用",
     "spell_cd": "符卡冷却",
+    "gameover_highscore": "最高分",
     "pause_label": "暂停 PAUSE",
     "pause_hint": "按 ESC 继续"
   }

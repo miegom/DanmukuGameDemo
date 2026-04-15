@@ -137,6 +137,24 @@ class GameplayScene(BaseScene):
         ui_config = ResourceManager.load_json("assets/data/ui.json")
         text_map = ui_config.get("texts", {}) if isinstance(ui_config, dict) else {}
         self._ui_texts = text_map if isinstance(text_map, dict) else {}
+        hp_bar_cfg = ui_config.get("enemy_hp_bar", {}) if isinstance(ui_config, dict) else {}
+        if not isinstance(hp_bar_cfg, dict):
+            hp_bar_cfg = {}
+        self._enemy_hp_bar_height: int = max(2, int(hp_bar_cfg.get("height", 4)))
+        self._enemy_hp_bar_offset_y: int = int(hp_bar_cfg.get("offset_y", 8))
+        self._enemy_hp_bar_width_scale: float = max(1.0, float(hp_bar_cfg.get("width_scale", 2.2)))
+        self._enemy_hp_bar_bg_color: tuple[int, int, int] = self._parse_rgb(
+            hp_bar_cfg.get("bg_color", [52, 20, 24]),
+            fallback=(52, 20, 24),
+        )
+        self._enemy_hp_bar_fg_color: tuple[int, int, int] = self._parse_rgb(
+            hp_bar_cfg.get("fg_color", [255, 82, 92]),
+            fallback=(255, 82, 92),
+        )
+        self._enemy_hp_bar_border_color: tuple[int, int, int] = self._parse_rgb(
+            hp_bar_cfg.get("border_color", [245, 245, 245]),
+            fallback=(245, 245, 245),
+        )
         self._rng = np.random.default_rng(int(context.get("seed", 20260324)) + 1007)
 
         self.context["player"] = self.player
@@ -1113,6 +1131,24 @@ class GameplayScene(BaseScene):
         for enemy in self.enemies:
             ex, ey = self.camera.apply(enemy.x, enemy.y)
             self._draw_enemy_marker(screen, enemy, int(ex), int(ey))
+            self._draw_enemy_health_bar(screen, enemy, int(ex), int(ey))
+
+    @staticmethod
+    def _parse_rgb(raw: Any, fallback: tuple[int, int, int]) -> tuple[int, int, int]:
+        """Parse rgb list-like values with clamped fallback behavior."""
+        if not isinstance(raw, list) or len(raw) != 3:
+            return fallback
+        try:
+            red = int(raw[0])
+            green = int(raw[1])
+            blue = int(raw[2])
+        except (TypeError, ValueError):
+            return fallback
+        return (
+            max(0, min(255, red)),
+            max(0, min(255, green)),
+            max(0, min(255, blue)),
+        )
 
     def _draw_enemy_marker(self, screen: pygame.Surface, enemy: Enemy, x_pos: int, y_pos: int) -> None:
         """Draw enemy marker with its configured shape/color."""
@@ -1144,6 +1180,29 @@ class GameplayScene(BaseScene):
             return
 
         pygame.draw.circle(screen, color, (x_pos, y_pos), radius)
+
+    def _draw_enemy_health_bar(self, screen: pygame.Surface, enemy: Enemy, x_pos: int, y_pos: int) -> None:
+        """Draw one hp bar above enemy marker based on current_hp/max_hp ratio."""
+        max_hp = max(1, int(enemy.max_hp))
+        current_hp = max(0, min(int(enemy.hp), max_hp))
+        if max_hp <= 0 or current_hp <= 0:
+            return
+
+        ratio = float(np.clip(current_hp / float(max_hp), 0.0, 1.0))
+        full_w = max(10, int(round(enemy.radius * self._enemy_hp_bar_width_scale)))
+        bar_h = self._enemy_hp_bar_height
+
+        # Anchor the bar to an enemy-centered rect then apply a top offset.
+        bg_rect = pygame.Rect(0, 0, full_w, bar_h)
+        bg_rect.centerx = x_pos
+        bg_rect.bottom = y_pos - int(enemy.radius) - self._enemy_hp_bar_offset_y
+
+        fill_w = max(1, int(round(full_w * ratio)))
+        fill_rect = pygame.Rect(bg_rect.x, bg_rect.y, fill_w, bar_h)
+
+        pygame.draw.rect(screen, self._enemy_hp_bar_bg_color, bg_rect, border_radius=2)
+        pygame.draw.rect(screen, self._enemy_hp_bar_fg_color, fill_rect, border_radius=2)
+        pygame.draw.rect(screen, self._enemy_hp_bar_border_color, bg_rect, width=1, border_radius=2)
 
     def _draw_heart(self, screen: pygame.Surface, center: tuple[int, int], color: tuple[int, int, int]) -> None:
         """Draw simple heart shape for player placeholder icon."""

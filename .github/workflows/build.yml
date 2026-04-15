@@ -47,7 +47,7 @@ jobs:
           sudo apt-get install -y libxcb-xinerama0
           pyinstaller --noconfirm --clean --noconsole --onedir --name "${{ matrix.executable_name }}" --add-data "assets:assets" main.py
 
-      - name: Upload Artifacts
+      - name: Upload Artifactsg
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}

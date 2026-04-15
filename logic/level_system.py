@@ -267,6 +267,7 @@ class WaveManager:
         preset = self._enemy_presets.get(enemy_type)
         if preset is None:
             preset = self._enemy_presets["zako_fairy_small"]
+        hp_value = max(1, int(preset.get("hp", 20)))
 
         danmaku = DanmakuGroup(
             shape=DiscreteShape(
@@ -289,7 +290,8 @@ class WaveManager:
             x=x_pos,
             y=y_pos,
             enemy_type=enemy_type,
-            hp=max(1, int(preset.get("hp", 20))),
+            hp=hp_value,
+            max_hp=hp_value,
             radius=max(6.0, float(preset.get("radius", 12.0))),
             move_speed=max(10.0, float(preset.get("move_speed", 60.0))),
             ai_mode=str(preset.get("ai_mode", "chase")),

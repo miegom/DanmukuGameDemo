@@ -7,6 +7,7 @@ from typing import Any
 import pygame
 
 from core.resource_mgr import ResourceManager
+from core.save_system import save_highscore_if_needed
 from scenes.base_scene import BaseScene
 
 
@@ -18,6 +19,13 @@ class GameOverScene(BaseScene):
         super().__init__(context)
         self._ready_for_input: bool = False
         self._enter_elapsed: float = 0.0
+        self._score_value: int = int(self.context.get("score", 0))
+        self._highscore_value: int = save_highscore_if_needed(self._score_value)
+        ui_config = ResourceManager.load_json("assets/data/ui.json")
+        text_map = ui_config.get("texts", {}) if isinstance(ui_config, dict) else {}
+        if not isinstance(text_map, dict):
+            text_map = {}
+        self._highscore_label: str = str(text_map.get("gameover_highscore", "最高分"))
         self._title_font = ResourceManager.get_ui_font("gameover_title", 80)
         self._info_font = ResourceManager.get_ui_font("gameover_info", 36)
 
@@ -51,13 +59,16 @@ class GameOverScene(BaseScene):
         width, height = screen.get_size()
         screen.fill((18, 4, 10))
 
-        score_value = int(self.context.get("score", 0))
-
         title_surface = self._title_font.render("游戏结束", True, (255, 110, 120))
         score_surface = self._info_font.render(
-            f"得分: {score_value}",
+            f"得分: {self._score_value}",
             True,
             (240, 230, 230),
+        )
+        highscore_surface = self._info_font.render(
+            f"{self._highscore_label}: {self._highscore_value}",
+            True,
+            (210, 235, 210),
         )
         hint_surface = self._info_font.render(
             "按任意键返回标题",
@@ -66,5 +77,6 @@ class GameOverScene(BaseScene):
         )
 
         screen.blit(title_surface, title_surface.get_rect(center=(width // 2, height // 2 - 60)))
-        screen.blit(score_surface, score_surface.get_rect(center=(width // 2, height // 2 + 8)))
-        screen.blit(hint_surface, hint_surface.get_rect(center=(width // 2, height // 2 + 54)))
+        screen.blit(score_surface, score_surface.get_rect(center=(width // 2, height // 2 - 2)))
+        screen.blit(highscore_surface, highscore_surface.get_rect(center=(width // 2, height // 2 + 38)))
+        screen.blit(hint_surface, hint_surface.get_rect(center=(width // 2, height // 2 + 82)))

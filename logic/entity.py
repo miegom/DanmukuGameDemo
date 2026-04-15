@@ -51,6 +51,7 @@ class Enemy:
     y: float
     enemy_type: str = "zako_fairy_small"
     hp: int = 20
+    max_hp: int = 20
     radius: float = 12.0
     move_speed: float = 60.0
     ai_mode: str = "chase"
@@ -80,6 +81,11 @@ class Enemy:
         bounds=(-320.0, 320.0, -240.0, 240.0),
         max_lifetime=2.6,
     ))
+
+    def __post_init__(self) -> None:
+        """Normalize hp/max_hp so rendering and combat logic stay consistent."""
+        self.hp = max(0, int(self.hp))
+        self.max_hp = max(1, int(self.max_hp), self.hp)
 
     def update_attack(self, t: float, px: float, py: float) -> None:
         """Advance enemy bullet simulation for the current frame."""
