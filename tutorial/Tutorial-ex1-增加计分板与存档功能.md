@@ -116,7 +116,7 @@ score_surface = self._info_font.render(
 
 ---
 
-## 5. 最高分存档（已落地实现）
+## 5. 最高分存档
 
 本项目现在已经实装为：`assets/data/highscore.json` 持久化最高分。
 
@@ -189,7 +189,7 @@ highscore_surface = self._info_font.render(
 
 ---
 
-## 6. 你将修改哪些文件（建议）
+## 6. 你将修改哪些文件
 
 1. `scenes/gameplay_scene.py`（实时计分 + 计分板渲染）
 2. `scenes/gameover_scene.py`（结算页写入并显示最高分）

@@ -120,7 +120,7 @@ if next_scene_class is not None:
     current_scene = next_scene_class(game_context)
 ```
 
-### 4.2 为什么这就是好的模块化？
+### 4.2 模块化设计
 
 - `TitleScene` 只负责“提出切换请求”，不直接管理主循环。
 - `BaseScene` 统一切换协议，所有场景都可复用。
@@ -156,7 +156,7 @@ def apply_tuning(self, param: str, mode: str, value: float) -> bool:
     return True
 ```
 
-### 5.2 为什么这条链路设计合理？
+### 5.2 链路设计
 
 - `UpgradeScene` 只负责 UI 与玩家选择。
 - `UpgradeManager` 负责升级规则与校验（是否可用、是否已拿过、前置条件）。

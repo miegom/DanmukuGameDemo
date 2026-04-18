@@ -70,7 +70,7 @@ fill_width = int(round(full_width * ratio))
 
 ---
 
-## 5. 本项目的实际实现（已落地）
+## 5. 本项目的实际实现
 
 ### 5.1 在 `Enemy` 中补充 `max_hp`
 

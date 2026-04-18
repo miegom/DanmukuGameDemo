@@ -123,7 +123,7 @@ class BaseScene:
 
 ---
 
-## 3. 性能设计（入门版理解）
+## 3. 性能设计
 
 弹幕核心在 `logic/danmaku_system.py`，使用 NumPy 向量化更新：
 
@@ -167,7 +167,7 @@ python -m pip install -r requirements.txt
 python main.py
 ```
 
-### 4.4 运行 smoke tests（推荐）
+### 4.4 运行 smoke tests
 
 ```bash
 python tests/danmaku_smoke.py

@@ -9,7 +9,7 @@
 在本项目里，玩家普攻、玩家符卡、敌人弹幕，本质上都统一为同一种对象：`DanmakuGroup`。  
 这意味着你只要理解一个核心类，就能看懂大部分战斗系统。
 
-一句话概括：**DanmakuGroup = 发射规则（Shape + Emission）+ 运动规则（Motions）+ 存储容器（Pool）**。
+**DanmakuGroup = 发射规则（Shape + Emission）+ 运动规则（Motions）+ 存储容器（Pool）**。
 
 ---
 
@@ -124,7 +124,7 @@ for operator in self.motions:
 
 ## 4. 设计模式分析（结合真实代码）
 
-## 4.1 对象池模式（Object Pool）——已明确采用
+## 4.1 对象池模式
 
 ### 证据代码
 
@@ -151,7 +151,7 @@ def filter_active(self, valid_mask: np.ndarray) -> int:
 - 活跃子弹始终压缩在 `[0, active_count)`，便于向量化更新
 - 对弹幕游戏这种“高频生成/高频销毁”场景非常关键
 
-## 4.2 策略模式（Strategy）——核心模式
+## 4.2 策略模式
 
 运动算子通过 `MotionOperator.apply()` 注入到 `motions` 列表：
 
@@ -174,7 +174,7 @@ if motion_name == "homing":
 
 这让“新增一种弹道行为”变成新增一个类，而不是修改大量旧逻辑。
 
-## 4.3 工厂模式（Factory）——轻量实现
+## 4.3 工厂模式
 
 `WaveManager._build_enemy()`根据 `enemy_type + preset` 统一构建 `Enemy`（含 `DanmakuGroup`）：
 
@@ -188,7 +188,7 @@ def _build_enemy(self, enemy_type: str, x_pos: float, y_pos: float) -> Enemy:
 
 这是典型“按配置生产对象”的工厂化思想。
 
-## 4.4 状态模式（State）——局部状态机思想
+## 4.4 状态模式
 
 敌人攻击流程使用状态字段 + 状态转移：
 
@@ -269,7 +269,7 @@ screen.blits(list(zip(repeat(sprite, len(blit_positions)), blit_positions)), dor
 
 ---
 
-## 6. 进阶读者可关注的设计收益
+## 6. 设计收益
 
 - **一致性**：玩家/敌人弹幕同构，降低理解成本
 - **可扩展**：新增弹道只需新增 `MotionOperator` 子类
